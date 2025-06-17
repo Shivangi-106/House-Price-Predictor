@@ -135,10 +135,10 @@ import mysql.connector
 
 # ------------------ DB CONFIG ------------------
 DB_CONFIG = {
-    'host': 'localhost',         # 🔁 Change if needed
-    'user': 'root',              # 🔁 Change to your MySQL username
-    'password': '143143', # 🔁 Change to your MySQL password
-    'database': 'house_price_db'
+    'host': os.getenv('DB_HOST'),         # 🟡 Use Render’s environment variables
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'database': os.getenv('DB_NAME')
 }
 
 MODEL_FILE = "model.joblib"
@@ -159,11 +159,9 @@ def fetch_data(table):
 def insert_input_to_db(data_dict, table='data_copy'):
     conn = get_connection()
     cursor = conn.cursor()
-
     cols = ', '.join(data_dict.keys())
     vals = ', '.join(['%s'] * len(data_dict))
     sql = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
-
     cursor.execute(sql, tuple(data_dict.values()))
     conn.commit()
     cursor.close()
@@ -172,7 +170,10 @@ def insert_input_to_db(data_dict, table='data_copy'):
 def move_data_to_main():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO housing_data (CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT, MEDV) SELECT CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT, MEDV FROM data_copy")
+    cursor.execute("""
+        INSERT INTO housing_data (CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT, MEDV)
+        SELECT CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT, MEDV FROM data_copy
+    """)
     cursor.execute("DELETE FROM data_copy")
     conn.commit()
     cursor.close()
@@ -198,24 +199,24 @@ except:
     df_init = fetch_data('housing_data')
     model = train_and_save_model(df_init)
 
-# ------------------ UI ------------------
+# ------------------ STREAMLIT UI ------------------
 st.title("🏠 Real Estate Price Prediction")
 
 st.markdown("""
-Enter the property details below. Please follow the format guidelines:
+Enter property details below. Follow the format carefully:
 
 - **CRIM**: Crime in % (e.g., `2` for 2%)
 - **ZN**: Residential zone in % (e.g., `25`)
 - **INDUS**: Industry area in % (e.g., `15`)
 - **CHAS**: 0 = No river bound, 1 = River bound
-- **NOX**: Nitric oxide concentration in % (e.g., `0.5`)
-- **RM**: Number of rooms (e.g., `3`, `6.5`)
+- **NOX**: Nitric oxide in % (e.g., `0.5`)
+- **RM**: Number of rooms (e.g., `6.5`)
 - **AGE**: Age of house (e.g., `50`)
 - **DIS**: Distance to jobs in km (e.g., `4.2`)
-- **RAD**: Highway access in km (e.g., `3`)
-- **TAX**: Tax in % per $1000 (e.g., `18`)
+- **RAD**: Highway access (e.g., `3`)
+- **TAX**: Tax per $1000 (e.g., `18`)
 - **PTRATIO**: Pupil-teacher ratio (e.g., `15.5`)
-- **B**: Black population index (as-is)
+- **B**: Black population index
 - **LSTAT**: Lower status population % (e.g., `5.3`)
 """)
 
@@ -255,12 +256,12 @@ if st.button("Predict"):
             input_df['MEDV'] = round(prediction, 1)
             insert_input_to_db(input_df.iloc[0].to_dict(), table='data_copy')
 
-            # Retrain after every 10 entries
+            # Retrain model after every 10 entries
             copy_data = fetch_data('data_copy')
             if len(copy_data) >= 10:
-                retrained_model = train_and_save_model(copy_data)
-                model = retrained_model
-                move_data_to_main()  # clear data_copy and move to housing_data
+                model = train_and_save_model(copy_data)
+                move_data_to_main()
 
         except Exception as e:
             st.error(f"⚠️ Error: {e}")
+
