@@ -1,5 +1,6 @@
-pandas
 streamlit
-scikit-learn 
+pandas
 numpy
-matplotlib
+scikit-learn
+joblib
+mysql-connector-python
