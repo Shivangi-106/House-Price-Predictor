@@ -1,5 +1,5 @@
-'''
-mport streamlit as st
+
+import streamlit as st
 import pandas as pd
 import numpy as np
 import os
@@ -119,10 +119,9 @@ if st.button("Predict"):
         except Exception as e:
             st.error(f"⚠️ Error: {e}")
 
+
+
 '''
-
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -265,3 +264,4 @@ if st.button("Predict"):
         except Exception as e:
             st.error(f"⚠️ Error: {e}")
 
+'''
